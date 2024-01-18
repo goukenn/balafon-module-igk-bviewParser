@@ -4,6 +4,7 @@
 // @date: 20240115 10:42:02
 namespace igk\bviewParser;
 
+use IGK\System\IO\FileHandler;
 
 // + | ------------------------------------------------
 // + | please use $reg closure var to register Module function 
@@ -11,6 +12,7 @@ namespace igk\bviewParser;
 
 // $reg('initDoc', function($doc){ /* call in view-build-context to initialize the document */ })
 
+// FileHandler::Register('.bview', new BviewFileHanler);
 
 // + module definition
 return [
