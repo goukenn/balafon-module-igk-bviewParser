@@ -3,9 +3,7 @@
 // @file: BviewParserOptions.php
 // @date: 20240117 10:04:16
 namespace igk\bviewParser\System\IO;
-
 use IGK\System\Html\HtmlContext;
-
 ///<summary></summary>
 /**
 * 

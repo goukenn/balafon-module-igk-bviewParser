@@ -3,9 +3,7 @@
 // @file: ExpressionJsonEngine.php
 // @date: 20240116 16:36:50
 namespace igk\bviewParser\System\Engines;
-
 use igk\bviewParser\System\Engines\ExpressionEngineBase;
-
 ///<summary></summary>
 /**
 * 
@@ -13,12 +11,10 @@ use igk\bviewParser\System\Engines\ExpressionEngineBase;
 * @author C.A.D. BONDJE DOUE
 */
 class ExpressionJsonEngine extends ExpressionEngineBase{
-
-    public function evalExpression(string $content, $options = null): mixed { 
+    public function evalExpression(string $content, $options = null) { 
         if ($data = json_decode($content)){
             return $data;
         }
         return '';
     }
-
 }

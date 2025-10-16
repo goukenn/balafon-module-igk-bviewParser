@@ -3,8 +3,6 @@
 // @file: BviewTokens.php
 // @date: 20240115 10:45:59
 namespace igk\bviewParser\System\IO;
-
-
 ///<summary></summary>
 /**
 * 
@@ -19,34 +17,27 @@ abstract class BviewTokens{
      * text to apply to node definition
      */
     const TOKEN_TEXT = 0x4; 
-
     /**
      * value to pass
      */
     const TOKEN_VALUE = 0x5;
-    
     /**
      * 
      */
     const TOKEN_LITTERAL = 0x6;
-
     /**
      * read brank
      */
     const TOKEN_BRANK = 0x7;
-
-
     /**
      * read attribute
      */
     const TOKEN_ATTRIBUTE = 0x8;
-
     /**
      * attribute value
      */
     const TOKEN_ATTRIBUTE_VALUE = 0x9;
-
     const TOKEN_BEGIN_BRANK_EXPRESSION = 0xa;
-
     const TOKEN_EXPRESSION = 0xb;
+    const TOKEN_ADD_SELECTOR = 0xc;
 }

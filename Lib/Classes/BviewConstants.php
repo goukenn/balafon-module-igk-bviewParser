@@ -3,8 +3,6 @@
 // @file: BviewConstants.php
 // @date: 20240116 14:41:23
 namespace igk\bviewParser;
-
-
 ///<summary></summary>
 /**
 * 

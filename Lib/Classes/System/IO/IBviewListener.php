@@ -3,8 +3,6 @@
 // @file: IBviewListener.php
 // @date: 20240115 15:51:56
 namespace igk\bviewParser\System\IO;
-
-
 ///<summary></summary>
 /**
 * 

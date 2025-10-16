@@ -3,8 +3,7 @@
 // @file: BviewDefinition.php
 // @date: 20240116 09:23:50
 namespace igk\bviewParser\System\IO;
-
-
+use IGK\System\Html\HtmlNodeBuilder;
 ///<summary></summary>
 /**
 * view section definition
@@ -17,7 +16,6 @@ class BviewDefinition{
      * @var ?static
      */
     var $parent;
-
     /**
      * bview key definition
      * @var ?string
@@ -28,4 +26,18 @@ class BviewDefinition{
      * @var array
      */
     var $data = [];
+
+    /**
+     * 
+     * @return mixed 
+     */
+    public final function & getAttributeData(){
+        $attrib = null;
+        $definition = $this;
+        if (!isset($definition->data[HtmlNodeBuilder::KEY_ATTRIBS])){
+            $definition->data[HtmlNodeBuilder::KEY_ATTRIBS] = [];
+        }
+        $attrib = & $definition->data[HtmlNodeBuilder::KEY_ATTRIBS];
+        return $attrib;
+    }
 }

@@ -3,8 +3,6 @@
 // @file: ExpressionEngineBase.php
 // @date: 20240116 15:22:46
 namespace igk\bviewParser\System\Engines;
-
-
 ///<summary></summary>
 /**
 * 
@@ -18,7 +16,12 @@ abstract class ExpressionEngineBase{
             self::$sm_registry = [];
         }
     }
-    public static function Factory(string $name):?static{
+    /**
+     * create a factory
+     * @param string $name 
+     * @return null|static 
+     */
+    public static function Factory(string $name){
         self::_InitRegistry();
         $cl = null;
         if (isset(self::$sm_registry[$name])){
@@ -33,5 +36,11 @@ abstract class ExpressionEngineBase{
         self::_InitRegistry();
         self::$sm_registry[$name] =$engine;
     }
-    public abstract function evalExpression(string $content, $options=null):mixed;
+    /**
+     * eval expression
+     * @param string $content 
+     * @param mixed $options 
+     * @return mixed 
+     */
+    public abstract function evalExpression(string $content, $options=null);
 }

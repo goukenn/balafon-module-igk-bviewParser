@@ -3,8 +3,6 @@
 // @file: BviewFlags.php
 // @date: 20240116 12:11:10
 namespace igk\bviewParser\System\IO;
-
-
 ///<summary></summary>
 /**
 * 

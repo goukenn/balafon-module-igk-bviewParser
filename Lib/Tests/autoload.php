@@ -1,7 +1,6 @@
 <?php
 // @author: C.A.D. BONDJE DOUE
 // @date: 20240115 10:42:02
-
 require_once (function ($name) {
     // init environment    
     foreach (['IGK_BASE_DIR', 'IGK_TEST_CONTROLLER', 'IGK_APP_DIR'] as $m) {
@@ -14,7 +13,7 @@ require_once (function ($name) {
             }
         }
     }
-    if (!defined('IGK_APP_DIR')) {
+    if (!defined($name)) {
         $resolv_path = function ($dir, $value) {
             $p = realpath($value);
             if (empty($p)) {
@@ -27,7 +26,7 @@ require_once (function ($name) {
         if (function_exists('simplexml_load_file')) {
             $tconfigFile = null;
             while (!empty($bdir)) {
-                if (file_exists($configFile = $bdir . "/balafon.config.xml")) {
+                if (igk_io_cache_file_exists($configFile = $bdir . "/balafon.config.xml")) {
                     $tconfigFile = $configFile;
                     break;
                 }
@@ -53,7 +52,7 @@ require_once (function ($name) {
                 }
             }
         }
-        !defined('IGK_APP_DIR') && define('IGK_APP_DIR', $bdir);
+        !defined( $name ) && define( $name, $bdir);
     }
     return constant($name);
 })('IGK_APP_DIR') . "/Lib/igk/Lib/Tests/autoload.php";

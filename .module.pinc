@@ -5,21 +5,20 @@
 namespace igk\bviewParser;
 
 use IGK\System\IO\FileHandler;
-
+use igk\bviewParser\System\IO\BviewFileHandler; 
 // + | ------------------------------------------------
 // + | please use $reg closure var to register Module function 
 // + |
+FileHandler::Register('.bview|'.FileHandler::FILE_CONTEXT_VIEW, new BviewFileHandler);
 
-// $reg('initDoc', function($doc){ /* call in view-build-context to initialize the document */ })
-
-// FileHandler::Register('.bview', new BviewFileHanler);
+ 
 
 // + module definition
 return [
 //------------------------------------------------
 // define entry name space
 //
-"entry_NS"=>\igk\bviewParser::class,
+"entry_NS"=>"igk\\bviewParser",
 
 //------------------------------------------------
 // version

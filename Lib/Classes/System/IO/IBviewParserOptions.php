@@ -3,8 +3,6 @@
 // @file: IBviewParserOptions.php
 // @date: 20240115 10:55:25
 namespace igk\bviewParser\System\IO;
-
-
 ///<summary></summary>
 /**
 * biew parser state option 
@@ -14,5 +12,4 @@ namespace igk\bviewParser\System\IO;
 * @property mixed $raw data to pass to view;
 */
 interface IBviewParserOptions{
-
 }
