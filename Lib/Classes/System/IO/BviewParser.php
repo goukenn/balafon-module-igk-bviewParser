@@ -506,10 +506,11 @@ class BviewParser
                         $args = [];
                     }
                     if ($e->tokenID == 'rf') {
-                        $v = trim($v);
+                        $v = ltrim($v);
+                        $v = preg_replace("/^\\s+/", " ", $v);
+                        $v = preg_replace("/\\s+$/", " ", $v);
                         if ($end_express){
-                            $v = substr($source, $e->from, ($end_pos -$e->from)-1);
-                            $v = rtrim($v, '}');
+                            $v = substr($source, $e->from, ($end_pos -$e->from)-1); 
                             $lpos = $pos = $end_pos - 1;
                         }
                     }

@@ -3,6 +3,8 @@
 // @file: BviewParserTest.php
 // @date: 20240115 10:57:41
 namespace igk\bviewParser\Tests\System\IO;
+
+use Exception;
 use igk\bviewParser\System\Engines\EvalExpression;
 use igk\bviewParser\System\IO\BviewContextAttributeExpression;
 use igk\bviewParser\System\IO\BviewParser;
@@ -11,6 +13,12 @@ use IGK\Helper\Activator;
 use IGK\System\Html\HtmlNodeBuilder;
 use IGK\Tests\Controllers\ModuleBaseTestCase;
 use igk\bviewParser\Tests\System\Controllers\BviewDummyCtrl;
+use IGKException;
+use IGK\System\Exceptions\EnvironmentArrayException;
+use IGK\System\Exceptions\CssParserException;
+use IGK\System\Exceptions\ArgumentTypeNotValidException;
+use ReflectionException;
+
 ///<summary></summary>
 /**
  * 
@@ -361,7 +369,7 @@ JSX);
     {
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.btn[title:osaka] > ajxa.link(./presentation){ 
-            - hello world 
+            - hello world
         }
 JSX);
         $this->assertEquals(['div#id.btn[title:osaka] > ajxa.link(./presentation)' => 'hello world'], $b->data);
@@ -375,7 +383,7 @@ JSX);
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.container > loop([1,2,3]){ 
             li{
-            - hello world 
+            - hello world
             }
         }
 JSX);
@@ -396,7 +404,7 @@ JSX);
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.container > loop([[:@raw->list]]){ 
             li{
-            - hello world 
+            - hello world
             }
         }
 JSX);
@@ -486,7 +494,7 @@ JSX);
 div#id.container{ 
     div.loopnode > loop([[:@raw->list]]){   
         /*li{ */                                      
-            - item : {{ $raw }}                        
+            - item : {{ $raw }}
         /*} */            
     }
 }
@@ -495,14 +503,14 @@ bview);
         // $this->assertEquals(['div#id.container' => ['div.loopnode > loop([[:@raw->list]])' =>
         // new EvalExpression('item : {{ $raw }}')]], $b->data);
         //$this->assertEquals(['div#id.container'=>['div.loopnode > loop([[:@raw->list]])'=>['li'=>'item :']]], $b->data); 
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode"> item : 2 item : 5 item : 6 </div></div>', $this->renderData($b->data, $context));
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode">item : 2item : 5item : 6</div></div>', $this->renderData($b->data, $context));
     }
     public function test_bview_sub_loop_and_exit()
     {
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.container{ 
             div.loopnode > loop([[:@raw->list]]){   
-                    - item : {{ $raw }}   
+                - item : {{ $raw }} 
             }
             div.footer{
                 - item: {{ $raw | json }}
@@ -512,7 +520,7 @@ JSX);
         $this->assertEquals([
             'div#id.container' =>
             [
-                'div.loopnode > loop([[:@raw->list]])' => new EvalExpression('item : {{ $raw }}'),
+                'div.loopnode > loop([[:@raw->list]])' => new EvalExpression('item : {{ $raw }} '),
                 'div.footer' => new EvalExpression('item: {{ $raw | json }}')
             ]
         ], $b->data);
@@ -521,14 +529,14 @@ JSX);
         $context->raw = (object)[
             'list' => [2, 5, 6]
         ];
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode"> item : 2 item : 5 item : 6 </div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode">item : 2 item : 5 item : 6 </div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
     }
     public function test_bview_sub_loop_dual_sub_and_exit()
     {
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.container{ 
             div.loopnode > loop([[:@raw->list]]) > span{   
-                    - item : {{ $raw }}   
+                    - item : {{ $raw }} 
             }
             div.footer{
                 - item: {{ $raw | json }}
@@ -538,7 +546,7 @@ JSX);
         $this->assertEquals([
             'div#id.container' =>
             [
-                'div.loopnode > loop([[:@raw->list]]) > span' => new EvalExpression('item : {{ $raw }}'),
+                'div.loopnode > loop([[:@raw->list]]) > span' => new EvalExpression('item : {{ $raw }} '),
                 'div.footer' => new EvalExpression('item: {{ $raw | json }}')
             ]
         ], $b->data);
@@ -547,8 +555,20 @@ JSX);
         $context->raw = (object)[
             'list' => [2, 5, 6]
         ];
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode"><span>item : 2</span><span>item : 5</span><span>item : 6</span></div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
-    }
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode"><span>item : 2 </span><span>item : 5 </span><span>item : 6 </span></div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
+    } 
+    /**
+     * 
+     * @param array $data 
+     * @param mixed $context 
+     * @return null|string 
+     * @throws IGKException 
+     * @throws EnvironmentArrayException 
+     * @throws Exception 
+     * @throws CssParserException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
     public function renderData(array $data, $context = null): ?string
     {
         $n = igk_create_notagnode();
