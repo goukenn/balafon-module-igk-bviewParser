@@ -10,13 +10,15 @@ use IGK\Controllers\BaseController;
 if (!function_exists('igk_html_node_bview')){
     /**
      * import bview context
-     * @param string $file bview file
+     * @param string $file bview file / 
      * @param ?BaseController base controller
      * @param ?array $args extra params 
      */
     function igk_html_node_bview(string $file, ?BaseController $source=null, $args=null){
         $source = $source ?? ViewHelper::CurrentCtrl();
-        $t = Path::Combine(ViewHelper::Dir(), $file);
+        $file = is_link($file) ? realpath($file) : $file;
+        
+        $t = !file_exists($file) ? Path::Combine(ViewHelper::Dir(), $file) : $file;
         $args = $args ?? ViewHelper::GetViewArgs('data'); 
         $handler = new BviewFileHandler; 
         $src = file_get_contents($t); 

@@ -9,6 +9,7 @@ use igk\bviewParser\System\Engines\EngineExpressionReaderFactory;
 use igk\bviewParser\System\Engines\ExpressionEngineBase;
 use igk\bviewParser\System\Exception\BviewSyntaxException;
 use igk\bviewParser\System\Html\Dom\BindingAttributeBase;
+use IGK\System\Console\Logger;
 use IGK\System\Html\HtmlNodeBuilder;
 use IGK\System\Html\IHtmlNodeEvaluableExpression;
 use IGK\System\Html\Traits\HtmlNodeTagExplosionTrait;
@@ -400,11 +401,11 @@ class BviewParser
                     case '`':
                         // read multiline expression
                         $v_d = igk_str_read_brank($content, $pos, $ch, $ch);
-                        $this->m_state->column += strlen($v_d);
-                        $v_lines = count(explode("\n", $v_d));
-                        if ($v_lines > 1) {
+                        $v_lines = count($lines = explode("\n", $v_d));
+                        if ($v_lines > 1){
                             $this->m_state->line += $v_lines - 1;
                         }
+                        $this->m_state->column = strlen(igk_array_last($lines));
                         $ch = '';
                         break;
                     case '[':
@@ -416,6 +417,14 @@ class BviewParser
                         self::_UpdateColumnAndLineState($this->m_state, $v_d);
                         $v .= $v_d;
                         $ch = '';
+                        break;
+                    case '(':
+                        if (!self::_EscapeSelector($content, $pos, $v)){
+                          $v_d = igk_str_read_brank($content, $pos, ')', '(');
+                          $v.= $v_d;
+                          $ch='';
+                        }
+                        //igk_wln_e(__FILE__.":".__LINE__ , 'start read brank');
                         break;
                 }
             }
@@ -436,6 +445,12 @@ class BviewParser
     }
     private $m_textExpression;
 
+    /**
+     * init expression used to read text
+     * @return RegexMatcherContainer 
+     * @throws IGKException 
+     * @throws Exception 
+     */
     protected function _initTextExpression()
     {
         $rg = new RegexMatcherContainer;
@@ -447,9 +462,12 @@ class BviewParser
         $type->patterns = [
             $brank
         ];
+        // $m = $rg->begin('(?=.)', '(?=\n)|(?<=\\})', 'rf')->last();
         $m = $rg->begin('(?=.)', '(?=\n)', 'rf')->last();
+        $end_expresss = $rg->match("(?=\\})", "end_express" )->last();
         $m->patterns = [
-            $expression
+            $expression,
+            $end_expresss
         ];
         $rg->append($expression);
         return $rg;
@@ -470,8 +488,11 @@ class BviewParser
         $v = '';
         $expressions = [];
         $args = [];
+        $end_express = false;
+        $end_pos = -1;
         while ($g = $texp->detect($source, $pos)) {
             if ($e = $texp->end($g, $source, $pos)) {
+                igk_is_debug() && Logger::info('token: '.$e->tokenID);
                 if (is_null($e->parentInfo)) {
                     $lpos = $pos;
                     $v = $e->value;
@@ -486,9 +507,18 @@ class BviewParser
                     }
                     if ($e->tokenID == 'rf') {
                         $v = trim($v);
+                        if ($end_express){
+                            $v = substr($source, $e->from, ($end_pos -$e->from)-1);
+                            $v = rtrim($v, '}');
+                            $lpos = $pos = $end_pos - 1;
+                        }
                     }
                     break;
                 } else {
+                    if (($e->tokenID == 'end_express') && !$end_express){
+                        $end_express = true;
+                        $end_pos = $e->from;
+                    }
                     if ($e->tokenID == 'expression') {
                         $expressions[trim($e->value . '')] = 1; // null;
                     } else if ($e->tokenID == 'args') {

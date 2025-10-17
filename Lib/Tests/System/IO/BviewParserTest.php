@@ -495,7 +495,7 @@ bview);
         // $this->assertEquals(['div#id.container' => ['div.loopnode > loop([[:@raw->list]])' =>
         // new EvalExpression('item : {{ $raw }}')]], $b->data);
         //$this->assertEquals(['div#id.container'=>['div.loopnode > loop([[:@raw->list]])'=>['li'=>'item :']]], $b->data); 
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode"> item : 2  item : 5  item : 6  </div></div>', $this->renderData($b->data, $context));
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode"> item : 2 item : 5 item : 6 </div></div>', $this->renderData($b->data, $context));
     }
     public function test_bview_sub_loop_and_exit()
     {
@@ -521,7 +521,7 @@ JSX);
         $context->raw = (object)[
             'list' => [2, 5, 6]
         ];
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode"> item : 2  item : 5  item : 6  </div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode"> item : 2 item : 5 item : 6 </div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
     }
     public function test_bview_sub_loop_dual_sub_and_exit()
     {
