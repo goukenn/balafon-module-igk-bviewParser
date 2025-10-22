@@ -3,6 +3,11 @@
 allow to use .bview file as source of loading project's view. 
 
 
+### miltiline string with backtick 
+` 
+information du jour 
+`
+
 ## how to use?
 - create in a project's view folder a view file that will have ".bview" extension 
 - write document with "bview language syntaxe"
@@ -3046,13 +3051,9 @@ ul>li*3 → Créer 3 éléments li dans un ul
 <?php
 // config.production.php
 return [
-    'bviewParser' => [
-        'cache_enabled' => true,
-        'cache_dir' => 'Data/cache/bview',
+    '.igk.bviewparser' => [ 
         'debug' => false,
-        'show_errors' => false,
-        'minify' => true,
-        'precompile' => true // Si disponible
+        'info' => '1.0'
     ]
 ];
 ```

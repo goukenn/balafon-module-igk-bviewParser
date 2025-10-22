@@ -4,15 +4,19 @@
 // @date: 20240115 10:45:51
 namespace igk\bviewParser\System\IO;
 
+use Closure;
 use Exception;
 use igk\bviewParser\System\Engines\EngineExpressionReaderFactory;
 use igk\bviewParser\System\Engines\ExpressionEngineBase;
 use igk\bviewParser\System\Exception\BviewSyntaxException;
 use igk\bviewParser\System\Html\Dom\BindingAttributeBase;
+use IGK\Constants;
+use IGK\Helper\StringUtility;
 use IGK\System\Console\Logger;
 use IGK\System\Html\HtmlNodeBuilder;
 use IGK\System\Html\IHtmlNodeEvaluableExpression;
 use IGK\System\Html\Traits\HtmlNodeTagExplosionTrait;
+use IGK\System\IO\FileHandler;
 use IGK\System\Text\RegexMatcherContainer;
 use IGKException;
 use function igk_str_startwith as str_starts_with;
@@ -25,6 +29,8 @@ use function igk_str_startwith as str_starts_with;
 class BviewParser
 {
     use HtmlNodeTagExplosionTrait;
+    const RF_EXP = 'rf';
+
     protected $split = '>';
     protected static $sm_errors = [];
     /**
@@ -81,10 +87,18 @@ class BviewParser
     {
         return $this->m_state;
     }
+    /**
+     * read php variable 
+     * @param string $content 
+     * @param mixed &$pos 
+     * @return string 
+     * @throws Exception 
+     */
     private function _ReadVar(string $content, &$pos): string
     {
-        throw new \Exception('not implement');
-        $s = '';
+        preg_match('/^[a-zA-Z_][a-zA-Z_0-9]*/', substr($content, $pos), $tab);
+        $s = $tab[0];
+        $pos += strlen($tab[0]);
         return $s;
     }
     private function _ReadFlags(string $content, &$pos, &$v_ltoken)
@@ -217,6 +231,7 @@ class BviewParser
         $ch = $v = '';
         $this->m_state = new BviewParserStateInfo;
         $this->m_source = $content;
+        $v_globalhandler = $this->_initGlobalBacktickTypeDefinitionHandler();
         $v_ltoken = null;
         $v_skip = false;
         // + | --------------------------------------------------------------------
@@ -253,7 +268,7 @@ class BviewParser
                         } else {
                             switch ($e->tokenID) {
                                 case 'multi-comment':
-                                    if (is_null($e->info->endType)){
+                                    if (is_null($e->info->endType)) {
                                         throw new IGKException('invalid comment');
                                     }
                                     $v_ltoken = [BviewTokens::TOKEN_COMMENT, $e->value];
@@ -334,17 +349,10 @@ class BviewParser
                         break;
                     case '-':
                         // + | binding text definition or call expression
+                        // + |
                         if (empty(trim($v)) && ($content[$pos + 1] == ' ')) {
                             $pos += 2;
                             $v = $this->_readTextExpression($content, $pos, $this->m_state);
-                            // $v = self::_ReadExpression($content, $pos, $this->m_state);
-                            // $sub = strpos($content, "\n", $pos + 1);
-                            // if ($sub === false){
-                            //     // + | read to end
-                            //     $sub = $ln;
-                            // }
-                            // $data = trim(substr($content, $pos + 1, $sub - $pos + 1));
-                            // $v_ltoken = [BviewTokens::TOKEN_TEXT, $data];
                             $v_ltoken = [
                                 $v instanceof BviewExpression ?
                                     BviewTokens::TOKEN_EXPRESSION :  BviewTokens::TOKEN_TEXT,
@@ -356,6 +364,7 @@ class BviewParser
                         break;
                     case '+':
                         // + | consider it as a node expression event not found
+                        // + |
                         if (empty(trim($v)) && ($content[$pos + 1] == ' ')) {
                             $pos += 2;
                             $v = self::_ReadSelectorExpression($content, $pos, $this->m_state);
@@ -400,12 +409,62 @@ class BviewParser
                         break;
                     case '`':
                         // read multiline expression
-                        $v_d = igk_str_read_brank($content, $pos, $ch, $ch);
+                        $v_d = null;
+                        if (preg_match('/`+/', substr($content, $pos, 5), $tab)) {
+                            if ((strlen($tab[0])) == 3) {
+                                $ch = $tab[0];
+                                $v_d = $this->_readCodeExpression(substr($content, $pos), $ch);
+                                $len = strlen($v_d);
+                                $pos += $len;
+                                $g = substr(substr($v_d,0,  -3), 3);
+                                $type = null;
+                                $cx = 0;
+                                $type = StringUtility::ReadIdentifier($g, $cx);
+                                if ($type){
+                                    $g = substr($g, strlen($type));
+                                }
+                                 // + | remove first empty string
+                                $cm = explode("\n", $g);
+                                while(count($cm)){
+                                    if (!empty(trim($cm[0]))){
+                                        break;
+                                    }
+                                    array_shift($cm);
+                                }
+                                $g = implode("\n", $cm);
+                                $cl = '';
+
+                                if ($type){
+                                    $cl = '+code-'.$type;
+                                    if ($ctype = igk_getv($v_globalhandler , $type)){
+                                        if ($ctype instanceof Closure){
+                                            $g = $ctype($g);
+                                        } else {
+                                            $g = $ctype->transform($g);
+                                        }                                        
+                                    } 
+                                }
+                                if (is_string($g)){
+                                    $n = igk_create_node('code');
+                                    $n['class'] = $cl;
+                                    $n->content = $g;
+                                } else{
+                                    $n = $g;
+                                }                               
+                                 $v_ltoken = [
+                                    BviewTokens::TOKEN_TEXT,
+                                    $n->render()
+                                ];
+                            }
+                        }
+                        if (is_null($v_d)){
+                            $v_d = igk_str_read_brank($content, $pos, $ch, $ch);
+                        }
                         $v_lines = count($lines = explode("\n", $v_d));
-                        if ($v_lines > 1){
+                        if ($v_lines > 1) {
                             $this->m_state->line += $v_lines - 1;
                         }
-                        $this->m_state->column = strlen(igk_array_last($lines));
+                        $this->m_state->column = strlen(igk_array_last($lines));                           
                         $ch = '';
                         break;
                     case '[':
@@ -419,10 +478,10 @@ class BviewParser
                         $ch = '';
                         break;
                     case '(':
-                        if (!self::_EscapeSelector($content, $pos, $v)){
-                          $v_d = igk_str_read_brank($content, $pos, ')', '(');
-                          $v.= $v_d;
-                          $ch='';
+                        if (!self::_EscapeSelector($content, $pos, $v)) {
+                            $v_d = igk_str_read_brank($content, $pos, ')', '(');
+                            $v .= $v_d;
+                            $ch = '';
                         }
                         //igk_wln_e(__FILE__.":".__LINE__ , 'start read brank');
                         break;
@@ -446,6 +505,48 @@ class BviewParser
     private $m_textExpression;
 
     /**
+     * read code expression
+     * @param mixed $src 
+     * @param mixed $ch 
+     * @return mixed 
+     * @throws Exception 
+     * @throws IGKException 
+     */
+    private function _readCodeExpression($src, $ch)
+    {
+        $regex = new RegexMatcherContainer;
+        $regex->begin('('.$ch.')', "\\1", 'brank_definition');
+ 
+        $pos = 0;
+        // define
+        while ($g = $regex->detect($src, $pos)) {
+            if ($e = $regex->end($g, $src, $pos)) {
+                return $e->value;
+            }
+        }
+        return null;
+    }
+    /**
+     * initialize backtick reference handler 
+     * @return array{bcss: \Closure(mixed $src): mixed} 
+     */
+    protected function _initGlobalBacktickTypeDefinitionHandler(){
+        // handler might transform source code or transform litteral to html tag definition
+        return [
+            'bcss'=>function($src){                
+                if ($bcss_handler = FileHandler::GetFileHandlerFromExtension( Constants::BCSS_EXTENSION )){
+                    $src = $bcss_handler->transform($src);
+                }      
+                return $src;
+            },
+            'bjs'=>function($src){
+                $n = igk_create_node('balafonjs');
+                $n->content = $src;
+                return $n;
+            }
+        ];
+    }
+    /**
      * init expression used to read text
      * @return RegexMatcherContainer 
      * @throws IGKException 
@@ -454,6 +555,12 @@ class BviewParser
     protected function _initTextExpression()
     {
         $rg = new RegexMatcherContainer;
+        $string = $rg->appendStringDetection('string', true)->last();
+        $multi_line_string = $rg->createPattern([
+            'tokenID' => 'multiline-string',
+            'begin' => '(?<!\\\)(`)',
+            'end' => "\\1"
+        ]);
         $brank = $rg->createPattern(['begin' => '\(', 'end' => '\)', 'brank']);
         $args = $rg->createPattern(['begin' => '(?<=,)', 'end' => '(?=\))', 'args']);
         $brank->patterns = [$args, $brank];
@@ -462,12 +569,26 @@ class BviewParser
         $type->patterns = [
             $brank
         ];
-        // $m = $rg->begin('(?=.)', '(?=\n)|(?<=\\})', 'rf')->last();
-        $m = $rg->begin('(?=.)', '(?=\n)', 'rf')->last();
-        $end_expresss = $rg->match("(?=\\})", "end_express" )->last();
+        $m = $rg->begin('(?=.)', '(?=\n)', self::RF_EXP)->last();
+        $end_expresss = $rg->match("(?=\\})", "end_express")->last();
+        $wp_detection = $rg->match('[^\\w\\n\\S]{2,}', 'white-space')->last();
         $m->patterns = [
             $expression,
-            $end_expresss
+            $end_expresss,
+            $wp_detection,
+            $multi_line_string,
+            $string
+        ];
+
+        $string->begin = '(?<!\\\)("|\')';
+        $string->patterns = array_merge($string->patterns ?? [], [
+            $expression,
+            $rg->createPattern(['match' => "(?=\\n)", 'tokenID' => 'end-line']),
+        ]);
+
+        $multi_line_string->patterns = [
+            $rg->createPattern(['match' => "\\\\."]),
+            $expression,
         ];
         $rg->append($expression);
         return $rg;
@@ -490,12 +611,13 @@ class BviewParser
         $args = [];
         $end_express = false;
         $end_pos = -1;
+        $v_replaces = [];
         while ($g = $texp->detect($source, $pos)) {
             if ($e = $texp->end($g, $source, $pos)) {
-                igk_is_debug() && Logger::info('token: '.$e->tokenID);
+                igk_is_debug() && Logger::info('[bviewparser] token: ' . $e->tokenID);
                 if (is_null($e->parentInfo)) {
                     $lpos = $pos;
-                    $v = $e->value;
+                    $v = self::_ReplaceValue($e, $v_replaces);
                     if ($e->tokenID == 'data-type') {
                         $v_name = $e->beginCaptures[0][0];
                         $expression_reader = EngineExpressionReaderFactory::Create($v_name);
@@ -505,18 +627,29 @@ class BviewParser
                         $v = new BviewExpression($v_name, $v);
                         $args = [];
                     }
-                    if ($e->tokenID == 'rf') {
-                        $v = ltrim($v);
-                        $v = preg_replace("/^\\s+/", " ", $v);
-                        $v = preg_replace("/\\s+$/", " ", $v);
-                        if ($end_express){
-                            $v = substr($source, $e->from, ($end_pos -$e->from)-1); 
+                    if ($e->tokenID == self::RF_EXP) {
+                        $v = trim($v);
+                        // $v = json_decode($v, JSON_UNESCAPED_SLASHES);
+                        $v = stripslashes($v);
+
+                        // $v = ltrim($v);
+                        // $v = preg_replace("/^\\s+/", " ", $v);
+                        // $v = preg_replace("/\\s+$/", " ", $v);
+                        if ($end_express) {
+                            $v = substr($source, $e->from, ($end_pos - $e->from) - 1);
                             $lpos = $pos = $end_pos - 1;
                         }
                     }
+                    if ($e->tokenID == 'string') {
+                        $v = igk_str_remove_quote($v);
+                    }
+                    if ($e->tokenID == 'multiline-string') {
+                        $v_ch = substr($v, 0, 1);
+                        $v = igk_str_rm_last(substr($v, 1), $v_ch);
+                    }
                     break;
                 } else {
-                    if (($e->tokenID == 'end_express') && !$end_express){
+                    if (($e->tokenID == 'end_express') && !$end_express) {
                         $end_express = true;
                         $end_pos = $e->from;
                     }
@@ -525,6 +658,14 @@ class BviewParser
                     } else if ($e->tokenID == 'args') {
                         $args[] = $e->value;
                     }
+                    if ($e->tokenID == 'white-space') {
+                        array_push($v_replaces, (object)['from' => $e->from, 'to' => $e->to, 'value' => ' ']);
+                    }
+                    if ($e->tokenID == 'multiline-string') {
+                        $v_ch = substr($e->value, 0, 1);
+                        $v = igk_str_rm_last(substr($e->value, 1), $v_ch);
+                        array_push($v_replaces, (object)['from' => $e->from, 'to' => $e->to, 'value' => $v]);
+                    }
                 }
             }
         }
@@ -532,6 +673,29 @@ class BviewParser
         if ($expressions) {
             $v = new BviewExpression('eval', $v);
         }
+        return $v;
+    }
+    private static function _ReplaceValue($e, &$replaces)
+    {
+        $ts = $v = $e->value;
+        $offset = 0;
+        if (count($replaces)) {
+            usort($replaces, function ($a, $b) {
+                return $a->from <=> $b->from;
+            });
+            $v = '';
+            while (count($replaces)) {
+                $q = array_shift($replaces);
+                if (($q->from < $e->from) || ($q->to > $e->to)) {
+                    array_unshift($replaces, $q);
+                    break;
+                }
+                $v .= substr($ts, $offset, $q->from - $e->from - $offset) . $q->value;
+                $offset = $q->to - $e->from;
+            }
+            $v .= substr($ts, $offset);
+        }
+
         return $v;
     }
     private static function _ReadSelectorExpression(string $content, &$pos, $state)

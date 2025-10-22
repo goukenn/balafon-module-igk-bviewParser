@@ -1,0 +1,3 @@
+a.link('//google.com')[]{
+   - `hello {{ $b }} from {{ $ctrl | uppercase }}`
+}

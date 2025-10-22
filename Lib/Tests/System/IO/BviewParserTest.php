@@ -240,15 +240,15 @@ JSX);
         //     ]
         // ]);
         //+| in order to unescape the ' use litteral brank
-        $b = BviewParser::ParseFromContent(<<<'JSX'
-        a#id.btn{
-            span{
-                - 'data \'{{ $raw["x"] }}'
-            }
-        }
-JSX,  $options);
+        $b = BviewParser::ParseFromContent(<<<'bview'
+a#id.btn{
+    span{
+        - 'data \'{{ $raw["x"] }}'
+    }
+}
+bview,  $options);
         $this->assertEquals(
-            ['a#id.btn' => ['span' => new EvalExpression("'data \'{{ \$raw[\"x\"] }}'")]
+            ['a#id.btn' => ['span' => new EvalExpression("data \'{{ \$raw[\"x\"] }}")]
         ], $b->data);
     }
     public function test_bview_arg_evaluable_expression()
@@ -520,7 +520,7 @@ JSX);
         $this->assertEquals([
             'div#id.container' =>
             [
-                'div.loopnode > loop([[:@raw->list]])' => new EvalExpression('item : {{ $raw }} '),
+                'div.loopnode > loop([[:@raw->list]])' => new EvalExpression('item : {{ $raw }}'),
                 'div.footer' => new EvalExpression('item: {{ $raw | json }}')
             ]
         ], $b->data);
@@ -529,7 +529,7 @@ JSX);
         $context->raw = (object)[
             'list' => [2, 5, 6]
         ];
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode">item : 2 item : 5 item : 6 </div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode">item : 2item : 5item : 6</div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
     }
     public function test_bview_sub_loop_dual_sub_and_exit()
     {
@@ -546,7 +546,7 @@ JSX);
         $this->assertEquals([
             'div#id.container' =>
             [
-                'div.loopnode > loop([[:@raw->list]]) > span' => new EvalExpression('item : {{ $raw }} '),
+                'div.loopnode > loop([[:@raw->list]]) > span' => new EvalExpression('item : {{ $raw }}'),
                 'div.footer' => new EvalExpression('item: {{ $raw | json }}')
             ]
         ], $b->data);
@@ -555,7 +555,7 @@ JSX);
         $context->raw = (object)[
             'list' => [2, 5, 6]
         ];
-        $this->assertEquals('<div class="container" id="id"><div class="loopnode"><span>item : 2 </span><span>item : 5 </span><span>item : 6 </span></div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
+        $this->assertEquals('<div class="container" id="id"><div class="loopnode"><span>item : 2</span><span>item : 5</span><span>item : 6</span></div><div class="footer">item: {"list":[2,5,6]}</div></div>', $this->renderData($b->data, $context));
     } 
     /**
      * 
