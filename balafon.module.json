@@ -1,6 +1,7 @@
 {
     "name": "igk/bviewParser",
     "author": "C.A.D. BONDJE DOUE",
-    "version": "1.0",
+    "version": "1.1",
+    "repos":"https://github.com/goukenn/balafon-module-igk-bviewParser.git",
     "require": ["igk.jsBuild"]
 }
