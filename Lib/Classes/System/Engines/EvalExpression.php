@@ -13,7 +13,7 @@ use ReflectionException;
 
 ///<summary></summary>
 /**
-* 
+* expression to evaluate on rendering context 
 * @package igk\bviewParser\System\Engines
 * @author C.A.D. BONDJE DOUE
 */

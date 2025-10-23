@@ -19,6 +19,8 @@ use IGK\System\Exceptions\CssParserException;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use ReflectionException;
 
+use function PHPUnit\Framework\assertEquals;
+
 ///<summary></summary>
 /**
  * 
@@ -664,5 +666,21 @@ JSX);
                 'div.sfsymbol:bounce' => [],
             ]
         ], $b->data);
+    }
+
+    public function test_bview_text_order(){
+        $b = BviewParser::ParseFromContent(
+            implode("\n", ['div{', 
+                '    - one ',
+                '    span {',
+                '        - two',
+                '    }',
+                '    - tree',
+                '}',
+            ]));
+        $builder = new HtmlNodeBuilder;
+        $builder($b->data);
+        $s = $builder->t->render();
+        $this->assertEquals('<div>one<span>two</span>tree</div>', $s);
     }
 }

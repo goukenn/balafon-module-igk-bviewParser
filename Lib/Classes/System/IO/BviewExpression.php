@@ -5,7 +5,7 @@
 namespace igk\bviewParser\System\IO;
 ///<summary></summary>
 /**
-* 
+* litteral bview expression 
 * @package igk\bviewParser\System\IO
 * @author C.A.D. BONDJE DOUE
 */
