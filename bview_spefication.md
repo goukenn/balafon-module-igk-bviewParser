@@ -1267,6 +1267,15 @@ ul{
 }
 ```
 
+
+
+Usitlisation de séparateur ',' pour éviter l'usage de {} pour indiquer la fin de définition d'un noeud.
+
+```bview
+ul{ li.first, li.second}
+```
+
+
 **Observation :** .bview est plus lisible et concis pour les structures statiques.
 
 ---

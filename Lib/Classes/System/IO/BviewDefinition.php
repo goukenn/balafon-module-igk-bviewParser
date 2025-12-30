@@ -29,6 +29,12 @@ class BviewDefinition{
 
     /**
      * 
+     * @var mixed
+     */
+    var $depth;
+
+    /**
+     * 
      * @return mixed 
      */
     public final function & getAttributeData(){

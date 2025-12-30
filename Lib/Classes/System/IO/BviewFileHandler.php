@@ -33,9 +33,16 @@ class BviewFileHandler extends FileHandler{
         }
         return $n;
     }
+    /**
+     * 
+     * @return null|string 
+     */
     public function initDefaultSource():?string{
         $sb = new StringBuilder();
         $sb->appendLine('/* bview file */');
+        $sb->appendLine('# @author '.IGK_AUTHOR);
+        $sb->appendLine('# @version 1.0');
+        $sb->appendLine('# @date '.date('Y-m-d'));
         $sb->appendLine("main.section{}");
         return $sb.'';
     }

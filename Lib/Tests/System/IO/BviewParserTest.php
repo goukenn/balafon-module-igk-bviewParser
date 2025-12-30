@@ -380,21 +380,23 @@ JSX);
             self::renderData($b->data)
         );
     }
-    public function test_bview_loop()
+  
+    public function test_bview_loop_litteral()
     {
-        $b = BviewParser::ParseFromContent(<<<'JSX'
-        div#id.container > loop([1,2,3]){ 
-            li{
-            - hello world
-            }
-        }
-JSX);
+        $b = BviewParser::ParseFromContent(implode("\n", [
+            'div#id.container > loop([1,2,3]){',
+            'li{',
+            '- hello world',
+            '}',
+        '}']));
         $this->assertEquals(['div#id.container > loop([1,2,3])' => ['li' => 'hello world']], $b->data);
+       
+
         $n = igk_create_notagnode();
         $n->div()->loop([1, 2, 3])->li()->Content = 'hello world';
-        $this->assertEquals('<div><li>hello world</li><li>hello world</li><li>hello world</li></div>', $n->render());
+        $this->assertEquals('<div><li>hello world</li></div><div><li>hello world</li></div><div><li>hello world</li></div>', $n->render());
         $this->assertEquals(
-            '<div class="container" id="id"><li>hello world</li><li>hello world</li><li>hello world</li></div>',
+            str_repeat('<div class="container" id="id"><li>hello world</li></div>', 3),
             self::renderData($b->data)
         );
     }
@@ -411,7 +413,7 @@ JSX);
         }
 JSX);
         $this->assertEquals(['div#id.container > loop([[:@raw->list]])' => ['li' => 'hello world']], $b->data);
-        $this->assertEquals('<div class="container" id="id"><li>hello world</li><li>hello world</li><li>hello world</li></div>', $this->renderData($b->data, $context));
+        $this->assertEquals(str_repeat('<div class="container" id="id"><li>hello world</li></div>', 3), $this->renderData($b->data, $context));
     }
     public function test_bview_active_attribute()
     {
@@ -492,9 +494,10 @@ JSX);
         $context->raw = (object)[
             'list' => [2, 5, 6]
         ];
+        // loop in parser must do it in notagnode
         $b = BviewParser::ParseFromContent(<<<'bview'
 div#id.container{ 
-    div.loopnode > loop([[:@raw->list]]){   
+    div.loopnode > notagnode > loop([[:@raw->list]],null){   
         /*li{ */                                      
             - item : {{ $raw }}
         /*} */            
@@ -502,16 +505,13 @@ div#id.container{
 }
 bview);
         // subcontext in looping definition 
-        // $this->assertEquals(['div#id.container' => ['div.loopnode > loop([[:@raw->list]])' =>
-        // new EvalExpression('item : {{ $raw }}')]], $b->data);
-        //$this->assertEquals(['div#id.container'=>['div.loopnode > loop([[:@raw->list]])'=>['li'=>'item :']]], $b->data); 
         $this->assertEquals('<div class="container" id="id"><div class="loopnode">item : 2item : 5item : 6</div></div>', $this->renderData($b->data, $context));
     }
     public function test_bview_sub_loop_and_exit()
     {
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.container{ 
-            div.loopnode > loop([[:@raw->list]]){   
+            div.loopnode > notagnode > loop([[:@raw->list]]){   
                 - item : {{ $raw }} 
             }
             div.footer{
@@ -522,7 +522,7 @@ JSX);
         $this->assertEquals([
             'div#id.container' =>
             [
-                'div.loopnode > loop([[:@raw->list]])' => new EvalExpression('item : {{ $raw }}'),
+                'div.loopnode > notagnode > loop([[:@raw->list]])' => new EvalExpression('item : {{ $raw }}'),
                 'div.footer' => new EvalExpression('item: {{ $raw | json }}')
             ]
         ], $b->data);
@@ -537,7 +537,7 @@ JSX);
     {
         $b = BviewParser::ParseFromContent(<<<'JSX'
         div#id.container{ 
-            div.loopnode > loop([[:@raw->list]]) > span{   
+            div.loopnode > notagnode > loop([[:@raw->list]]) > span{   
                     - item : {{ $raw }} 
             }
             div.footer{
@@ -548,7 +548,7 @@ JSX);
         $this->assertEquals([
             'div#id.container' =>
             [
-                'div.loopnode > loop([[:@raw->list]]) > span' => new EvalExpression('item : {{ $raw }}'),
+                'div.loopnode > notagnode > loop([[:@raw->list]]) > span' => new EvalExpression('item : {{ $raw }}'),
                 'div.footer' => new EvalExpression('item: {{ $raw | json }}')
             ]
         ], $b->data);
@@ -682,5 +682,30 @@ JSX);
         $builder($b->data);
         $s = $builder->t->render();
         $this->assertEquals('<div>one<span>two</span>tree</div>', $s);
+    }
+
+    public function test_bview_litteral_separator(){
+        
+        $s ='ul{ li.first{} li.second{} }';
+        $d = self::_Render($s);
+        $this->assertEquals($v_k = '<ul><li class="first"></li><li class="second"></li></ul>', $d);
+
+        $s ='ul{ li.first, li.second }';
+        $d = self::_Render($s);
+        $this->assertEquals($v_k, $d); 
+    }
+
+    public function test_bview_attrib_binding(){
+        
+        $s ='ul > li > loop(2){ span.first }';
+        $d = self::_Render($s);
+        $this->assertEquals($v_k = '<ul><li><span class="first"></span></li><li><span class="first"></span></li></ul>', $d);
+  
+    }
+    private static function _Render(string $s){
+        $b = BviewParser::ParseFromContent($s);
+        $builder = new HtmlNodeBuilder;
+        $builder($b->data);
+        return $builder->t->render();
     }
 }

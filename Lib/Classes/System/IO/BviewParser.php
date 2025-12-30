@@ -21,6 +21,7 @@ use IGK\System\Text\RegexMatcherContainer;
 use IGKException;
 use function igk_str_startwith as str_starts_with;
 ///<summary></summary>
+
 /**
  * 
  * @package igk\bviewParser\System\IO
@@ -41,6 +42,7 @@ class BviewParser
     protected $m_source;
     var $data;
     var $option;
+    var $blockList;
     /**
      * bview special directive 
      * @var ?array
@@ -101,6 +103,13 @@ class BviewParser
         $pos += strlen($tab[0]);
         return $s;
     }
+    /**
+     * 
+     * @param string $content 
+     * @param mixed &$pos 
+     * @param mixed &$v_ltoken 
+     * @return void 
+     */
     private function _ReadFlags(string $content, &$pos, &$v_ltoken)
     {
         switch ($this->m_state->flag) {
@@ -213,6 +222,12 @@ class BviewParser
         $r->match("# +@([a-zA-Z_][a-zA-Z0-9_\-:]*) (.+)", 'g-expression');
         return $r;
     }
+    /**
+     * close handle
+     * @param mixed $v_ltoken 
+     * @param mixed &$v 
+     * @return void 
+     */
     protected function _fchandleToken($v_ltoken, &$v)
     {
         if (!empty($v = trim($v))) {
@@ -234,6 +249,7 @@ class BviewParser
         $v_globalhandler = $this->_initGlobalBacktickTypeDefinitionHandler();
         $v_ltoken = null;
         $v_skip = false;
+        $v_blocklist = null;
         // + | --------------------------------------------------------------------
         // + | remove special single comment meaning
         // + |
@@ -272,12 +288,14 @@ class BviewParser
                                         throw new IGKException('invalid comment');
                                     }
                                     $v_ltoken = [BviewTokens::TOKEN_COMMENT, $e->value];
+                                    $coffset = $e->to;
                                     break;
                                 case 'g-expression':
                                     if (!$this->directives) {
                                         $this->directives = [];
                                     }
                                     $this->directives[$e->beginCaptures[1][0]] = $e->beginCaptures[2][0];
+                                    $coffset = $e->to;
                                     break;
                             }
                             if ($v_ltoken) {
@@ -297,6 +315,26 @@ class BviewParser
             } else if ($this->m_state->flag) {
                 $this->_ReadFlags($content, $pos, $v_ltoken);
             } else {
+
+                if ($ch == '\''){                    
+                    if (preg_match('/\'{3}/', $content, $tab,0, $pos)){ 
+                        $v_last = strpos($content, "\n", $pos);
+                        if (false === $v_last){
+                            $v_blocklist[] = substr($content, $pos);
+                            $pos = $ln+1;
+                            continue;
+                        }
+                        $v_blocklist[] = substr($content, $pos, $v_last-$pos);
+                        $pos = $v_last+1;
+                        continue;
+                    }
+                }
+                if ($v_blocklist){
+                    $this->blockList[] = $v_blocklist;
+                    $v_blocklist = [];
+                }
+
+
                 switch ($ch) {
                     case ' ':
                         if (!$v_skip) {
@@ -343,6 +381,10 @@ class BviewParser
                             $this->m_state->depth++;
                         } else {
                             $this->m_state->depth--;
+                            if (!empty($sc = trim($v))){
+                                $this->handleToken([BviewTokens::TOKEN_ADD_SELECTOR, $sc]);
+                                $v = '';
+                            } 
                         }
                         $v_ltoken = [BviewTokens::TOKEN_BRANK, $ch];
                         $ch = '';
@@ -396,12 +438,12 @@ class BviewParser
                                 } else {
                                     igk_die('unterminated comment');
                                 }
-                            } else if ($n_ch=="/"){
+                            } else if ($n_ch == "/") {
                                 // read single line comment 
-                                $i = strpos($content, "\n", $pos+1);
-                                if ($i===false){
+                                $i = strpos($content, "\n", $pos + 1);
+                                if ($i === false) {
                                     $pos = strlen($content);
-                                }else{
+                                } else {
                                     $pos = $i;
                                 }
                                 $ch = '';
@@ -495,7 +537,16 @@ class BviewParser
                             $v .= $v_d;
                             $ch = '';
                         }
-                        //igk_wln_e(__FILE__.":".__LINE__ , 'start read brank');
+                        break;
+                    case ',':
+                        // + | --------------------------------------------------------------------
+                        // + | separated expression litteral to avoid usage of {}
+                        // + |  
+                        if (!empty($sc = trim($v))) {
+                            $v_ltoken = [BviewTokens::TOKEN_ADD_SELECTOR, $sc];
+                            $v = '';
+                            $ch = '';
+                        }
                         break;
                 }
             }
@@ -583,12 +634,12 @@ class BviewParser
             $brank
         ];
         $m = $rg->begin('(?=.)', '(?=\n)', self::RF_EXP)->last();
-        $end_expresss = $rg->match("(?=\\})", "end_express")->last();
+        $v_end_expresss = $rg->match("(?=\\})", "end_express")->last();
         $wp_detection = $rg->match('[^\\w\\n\\S]{2,}', 'white-space')->last();
         $v_global_exp = $rg->begin('\[\[:@', '\]\]', 'global-expression')->last();
         $m->patterns = [
             $expression,
-            $end_expresss,
+            $v_end_expresss,
             $wp_detection,
             $multi_line_string,
             $v_global_exp,
@@ -660,8 +711,9 @@ class BviewParser
                         // $v = preg_replace("/^\\s+/", " ", $v);
                         // $v = preg_replace("/\\s+$/", " ", $v);
                         if ($end_express) {
-                            $v = substr($source, $e->from, ($end_pos - $e->from) - 1);
+                            $v = substr($source, $e->from, ($end_pos - $e->from));
                             $lpos = $pos = $end_pos - 1;
+                            $end_express = false;
                         }
                     }
                     if ($e->tokenID == 'string') {
@@ -676,6 +728,11 @@ class BviewParser
                     if (($e->tokenID == 'end_express') && !$end_express) {
                         $end_express = true;
                         $end_pos = $e->from;
+
+                        if ($e->from == $pos) {
+                            // + | move forward
+                            $pos++;
+                        }
                     }
                     if ($e->tokenID == 'expression') {
                         $expressions[trim($e->value . '')] = 1; // null;
@@ -802,6 +859,28 @@ class BviewParser
         $cl = \igk\bviewParser\System\Html\Dom\BindingAttributeFactory::GetBindingAttributeHandler($attribute);
         return $cl;
     }
+    private static function _CloseDefinition($host, &$v_data)
+    {
+        $q = $host;
+        $v_def = $q->m_state->definition;
+        if ($v_def && $q->m_state->key) {
+            $v_d = $v_def->data;
+            $v_key = $q->m_state->key;
+            // + | convert to single entry value string
+            if (!empty($v_d) && ((count($v_d) == 1) && (key($v_d) === 0))) {
+                $v_d = $v_d[0];
+            }
+            self::_StoreDefinitionDataData($v_data, $v_key, $v_d);
+        }
+    }
+    private static function _StoreDefinitionDataData(&$v_data, $v_key, $v_d = [])
+    {
+        if (isset($v_data[$v_key])) {
+            // + | append tag block
+            $v_data[] = ['@_t:' . $v_key => $v_d];
+        } else
+            $v_data[$v_key] = $v_d;
+    }
     /**
      * handle token
      */
@@ -811,7 +890,8 @@ class BviewParser
         $v_listener = $this->m_listener;
         $v_data = null;
         $v_def = $this->m_state->definition;
-        if ($v_def && $v_def->parent)
+        $v_root = $v_def && $v_def->parent;
+        if ($v_root)
             $v_data =  &$v_def->parent->data;
         else
             $v_data =  &$this->data;
@@ -858,25 +938,12 @@ class BviewParser
             case BviewTokens::TOKEN_EXPRESSION:
                 $this->m_state->definition->data[] = $this->evalAttributeExpression($e[1]);
                 break;
-            case BviewTokens::TOKEN_VALUE:
-                $this->m_state->key = $e[1];
+            case BviewTokens::TOKEN_VALUE:    // set state key            
+                $this->m_state->key = $e[1];               
                 break;
             case BviewTokens::TOKEN_BRANK:
-                if ($e[1] == '}') {
-                    $v_def = $this->m_state->definition;
-                    if ($v_def && $this->m_state->key) {
-                        $v_d = $v_def->data;
-                        $v_key = $this->m_state->key;
-                        // + | convert to single entry value string
-                        if (!empty($v_d) && ((count($v_d) == 1) && (key($v_d) === 0))) {
-                            $v_d = $v_d[0];
-                        }
-                        if (isset($v_data[$this->m_state->key])) {
-                            // + | append tag block
-                            $v_data[] = ['@_t:' . $v_key => $v_d];
-                        } else
-                            $v_data[$v_key] = $v_d;
-                    }
+                if ($e[1] == '}') {                     
+                    self::_CloseDefinition($this, $v_data);
                     $this->_moveTop();
                     if ($this->m_state->depth === 0) {
                         $this->m_state->key = null;
@@ -885,33 +952,21 @@ class BviewParser
                     // start token
                     if ($this->m_state->key) {
                         // sub token start 
-                        $v_parent = $this->m_state->definition; //? $this->m_state->definition->parent : null;
-                        $this->m_state->definition = new BviewDefinition;
-                        $this->m_state->definition->key = $this->m_state->key;
-                        $this->m_state->definition->parent = $v_parent;
-                        // if (igk_is_debug())
-                        // {
-                        //     $defs = [];
-                        //     $path = $this->m_state->getFullSelectorPath();
-                        //     if ($path){
-                        //         $v_tv = '';
-                        //         $this->explodeTagDefinition($path, $defs, $v_tv);
-                        //         if ($defs){
-                        //             // detect in template definition
-                        //         }
-                        //         igk_debug_wln($path);
-                        //     }
-                        // }  
-                    }
+                        $v_parent = $this->m_state->definition;
+                        $v_definition = new BviewDefinition;
+                        $v_definition->key = $this->m_state->key;
+                        $v_definition->parent = $v_parent;
+                        $v_definition->depth = $this->m_state->depth-1;
+                        $this->m_state->definition = $v_definition;
+                    } else igk_die('missing key');
                 }
                 break;
             case BviewTokens::TOKEN_TEXT:
                 if ($this->m_state->definition) {
-                    $this->m_state->definition->data[] = $e[1]; // this->m_state->definition->data; 
+                    $this->m_state->definition->data[] = $e[1];
                 } else {
                     igk_die("missing definition");
                 }
-                //$this->m_state->definition->data[] = $e[1];
                 break;
             case BviewTokens::TOKEN_ADD_SELECTOR:
                 if ($this->m_state->definition) {

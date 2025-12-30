@@ -10,6 +10,7 @@ namespace igk\bviewParser\System\IO;
 * @author C.A.D. BONDJE DOUE
 * @property \IGK\Controllers\BaseController $ctrl 
 * @property mixed $raw data to pass to view;
+* @property mixed $view view infors args
 */
 interface IBviewParserOptions{
 }

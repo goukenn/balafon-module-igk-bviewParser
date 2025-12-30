@@ -43,13 +43,13 @@ bview        );
 
     public function test_bview_compact_script(){
         // check inline compact script 
-        $this->assertEquals('<div>top action</div><span>info</span>',
+        $this->assertEquals('<div>top action </div><span>info </span>',
         $this->_bview_parse('div{ - top action }   span{ - info }'),
         'inline compact script failed');
     }
     public function test_bview_arg(){
         // check inline compact script 
-        $this->assertEquals('<div>top : action</div>',
+        $this->assertEquals('<div>top : action </div>',
         $this->_bview_parse('div{ - top : {{ $x }} } ', (object)[
             'raw'=>[
                 'x'=>'action'
@@ -59,7 +59,7 @@ bview        );
     }
     public function test_bview_arg2(){
         // check inline compact script 
-        $this->assertEquals('<div>top : action</div>',
+        $this->assertEquals('<div>top : action </div>',
         $this->_bview_parse('div{ - top : {{ $raw->x }} } ', (object)[
             'raw'=>[
                 'x'=>'action'
@@ -70,7 +70,7 @@ bview        );
     public function test_bview_constant(){
         // check inline compact script 
         $this->assertEquals('<div>top '.IGK_VERSION.' bunny</div><champions></champions>',
-        $this->_bview_parse('div{ - top {{ IGK_VERSION }} bunny }  champions'),
+        $this->_bview_parse('div{ - top {{ IGK_VERSION }} bunny}  champions'),
         'constant failed');
     }
     /**
