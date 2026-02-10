@@ -37,5 +37,16 @@ class BviewParserDirectives{
      * default namespace
      * @var ?string
      */
-    var @namespace;
+    var $namespace;
+
+    /**
+     * 
+     * @var mixed
+     */
+    var $import;
+    
+    public function __construct()
+    {
+        throw new \Exception('Not implemented');
+    }
 }

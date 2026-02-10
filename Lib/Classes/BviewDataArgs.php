@@ -12,12 +12,14 @@ use IGK\System\DataArgs;
 * @author C.A.D. BONDJE DOUE
 */
 class BviewDataArgs extends DataArgs{
+    const RAW = 'raw';
     public function __construct($tab)
     {
-        $raw = igk_getv($tab, 'raw');
+        $v_k = self::RAW;
+        $raw = igk_getv($tab, $v_k);
         if (!($raw instanceof DataArgs)){
             $raw = new DataArgs($raw);
-            $tab['raw'] = $raw;
+            $tab[$v_k] = $raw;
         }
         parent::__construct($tab);
     }

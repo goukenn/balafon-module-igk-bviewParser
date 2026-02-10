@@ -80,11 +80,19 @@ class BviewParser
         $g->parse($content);
         return $g;
     }
+    /**
+     * expose error
+     * @return array 
+     */
     public static function GetErrors()
     {
         $tab = self::$sm_errors;
         return $tab;
     }
+    /**
+     * retrieve state 
+     * @return null|BviewParserStateInfo 
+     */
     protected function getState()
     {
         return $this->m_state;
@@ -294,7 +302,10 @@ class BviewParser
                                     if (!$this->directives) {
                                         $this->directives = [];
                                     }
-                                    $this->directives[$e->beginCaptures[1][0]] = $e->beginCaptures[2][0];
+                                    $d = $e->beginCaptures[1][0];
+                                    $dv = $e->beginCaptures[2][0];
+                                    $this->setDirectiveValue($d, $dv);
+                                    
                                     $coffset = $e->to;
                                     break;
                             }
@@ -567,6 +578,21 @@ class BviewParser
     }
     private $m_textExpression;
 
+    function setDirectiveValue(string $d, $dv){
+        $v_dir = & $this->directives;
+        if ($this->supportMultiDirectiveValue($d)){
+            if (isset($this->directives[$d])){
+                if (!is_array($v_dir[$d])){
+                    $v_dir[$d] = [$v_dir[$d]];
+                }
+            }
+            $v_dir[$d][] = $dv; 
+        }else
+            $v_dir[$d] = $dv;
+    }
+    function supportMultiDirectiveValue($d):bool{
+        return in_array($d, ['import']);
+    }
     /**
      * read code expression
      * @param mixed $src 
